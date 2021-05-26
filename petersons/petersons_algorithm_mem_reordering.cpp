@@ -8,7 +8,7 @@ struct PetersonsAlgorithm
   void entry(int thread_id)
   {
     flag[thread_id] = true;
-    int otherThreadId = 1 ^ thread_id; // xor is 1 if 0 and 0 if 1
+    int otherThreadId = 1 ^ thread_id; // xor is 1 if thread_id is 0 and 0 if 1
     turn = otherThreadId;
     //Possible reordering
     while (flag[otherThreadId] && turn == otherThreadId)
