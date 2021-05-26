@@ -1,6 +1,7 @@
 #include <iostream>
 #include <thread>
 #include <assert.h>
+#include <atomic>
 
 struct PetersonsAlgorithm
 {
