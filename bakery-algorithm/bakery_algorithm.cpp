@@ -5,10 +5,13 @@
 #include <algorithm>
 #include <vector>
 
-#define NUMBER_OF_THREADS 10
+#include <chrono>
+
+int NUMBER_OF_THREADS = std::thread::hardware_concurrency();
 
 struct BakeryAlgorithm
 {
+
     void entry(int thread_id)
     {
         choosing[thread_id] = true;
@@ -30,12 +33,13 @@ struct BakeryAlgorithm
     }
 
 private:
-    int number[NUMBER_OF_THREADS];
-    bool choosing[NUMBER_OF_THREADS];
+    int number[20]; // Fixed size, ideally should be just the NUMBER_OF_THREADS, vectors creating exceptions, working on fix.
+    bool choosing[20];
 };
 
 void total_sum(BakeryAlgorithm &bakery_algorithm, int &counter, int thread_id)
 {
+
     bakery_algorithm.entry(thread_id);
     counter++;
     bakery_algorithm.exit(thread_id);
@@ -49,7 +53,7 @@ int main()
 
     std::vector<std::thread> thread_collection;
 
-        for (int i = 0; i < NUMBER_OF_THREADS; i++)
+    for (int i = 0; i < NUMBER_OF_THREADS; i++)
     {
         thread_collection.__emplace_back([&]() { total_sum(bakery_algorithm, counter, thread_id.fetch_add(1)); });
     }
