@@ -1,39 +1,41 @@
 #pragma once
 
 #include <mutex>
-#include <queue>
+#include <list>
 #include <memory>
 #include <condition_variable>
 #include <thread>
 
 template <typename T>
-class threadsafe_queue
+class threadsafe_sorted_list
 {
+private:
     std::mutex m;
     std::condition_variable cv;
-    std::queue<std::shared_ptr<T> > queue;
+    std::list<std::shared_ptr<T> > list;
 
 public:
-    threadsafe_queue() {}
+    threadsafe_sorted_list(){};
 
-    void push(T value)
+    void push_back(T value)
     {
         std::lock_guard<std::mutex> lg(m);
-        queue.push(std::make_shared<T>(value));
+        list.push_back(std::make_shared<T>(value));
+        list.sort();
         cv.notify_one();
     }
 
-    std::shared_ptr<T> pop()
+    std::shared_ptr<T> pop_front()
     {
         std::lock_guard<std::mutex> lg(m);
-        if (queue.empty())
+        if (list.empty())
         {
             return std::shared_ptr<T>();
         }
         else
         {
-            std::shared_ptr<T> ref(queue.front());
-            queue.pop();
+            std::shared_ptr<T> ref(list.front());
+            list.pop_front();
             return ref;
         }
     }
@@ -41,32 +43,32 @@ public:
     bool empty()
     {
         std::lock_guard<std::mutex> lg(m);
-        return queue.empty();
+        return list.empty();
     }
 
-    std::shared_ptr<T> wait_pop()
+    std::shared_ptr<T> wait_pop_front()
     {
         std::lock_guard<std::mutex> lg(m);
         cv.wait(lg, [this]
-                { return !queue.empty(); });
-        std::shared_ptr<T> ref = queue.front();
-        queue.pop();
+                { return !list.empty(); });
+        std::shared_ptr<T> ref = list.front();
+        list.pop_front();
         return ref;
     }
 
     size_t size()
     {
         std::lock_guard<std::mutex> lg(m);
-        return queue.size();
+        return list.size();
     }
 
     bool try_pop(T &value)
     {
         std::lock_guard<std::mutex> lg(m);
-        if (queue.empty())
+        if (list.empty())
             return false;
-        value = std::move(*queue.front());
-        queue.pop();
+        value = std::move(*list.front());
+        list.pop_front();
         return true;
     }
 };

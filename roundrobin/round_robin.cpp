@@ -9,15 +9,14 @@
 #include "../threadpool/threadsafe_queue.h"
 #include "../threadpool/joiner_threads.h"
 
-
 std::mutex m;
+const int time_quantum = 10;
 
-void run(int display_value, int burst_time)
+void run(int display_value, int &burst_time)
 {
     std::cout << " Process id : " << std::this_thread::get_id() << " dispays value of : " << display_value << " with a burst time of : " << burst_time << std::endl;
     std::lock_guard<std::mutex> lg(m);
     std::this_thread::sleep_for(std::chrono::milliseconds(burst_time));
-    
 }
 
 class process_pool
