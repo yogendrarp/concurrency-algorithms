@@ -12,7 +12,7 @@ class threadsafe_sorted_list
 private:
     std::mutex m;
     std::condition_variable cv;
-    std::list<std::shared_ptr<T> > list;
+    std::list<T> list;
 
 public:
     threadsafe_sorted_list(){};
@@ -20,7 +20,7 @@ public:
     void push_back(T value)
     {
         std::lock_guard<std::mutex> lg(m);
-        list.push_back(std::make_shared<T>(value));
+        list.push_back(value);
         list.sort();
         cv.notify_one();
     }
@@ -34,7 +34,7 @@ public:
         }
         else
         {
-            std::shared_ptr<T> ref(list.front());
+            std::shared_ptr<T> ref = std::make_shared<T>(list.front());
             list.pop_front();
             return ref;
         }
@@ -51,7 +51,7 @@ public:
         std::lock_guard<std::mutex> lg(m);
         cv.wait(lg, [this]
                 { return !list.empty(); });
-        std::shared_ptr<T> ref = list.front();
+        std::shared_ptr<T> ref = std::make_shared<T>(list.front());
         list.pop_front();
         return ref;
     }
@@ -62,12 +62,12 @@ public:
         return list.size();
     }
 
-    bool try_pop(T &value)
+    bool try_pop_front(T &value)
     {
         std::lock_guard<std::mutex> lg(m);
         if (list.empty())
             return false;
-        value = std::move(*list.front());
+        value = std::move(*(std::make_shared<T>(list.front())));
         list.pop_front();
         return true;
     }
