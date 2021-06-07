@@ -6,36 +6,33 @@
 #include <vector>
 #include <cstdlib>
 #include <ctime>
-#include "../threadpool/threadsafe_queue.h"
+#include "../threadpool/threadsafe_sorted_list.h"
 #include "../threadpool/joiner_threads.h"
+#include "rr_process.h"
 
 std::mutex m;
-const int time_quantum = 10;
-
-void run(int display_value, int &burst_time)
-{
-    std::cout << " Process id : " << std::this_thread::get_id() << " dispays value of : " << display_value << " with a burst time of : " << burst_time << std::endl;
-    std::lock_guard<std::mutex> lg(m);
-    std::this_thread::sleep_for(std::chrono::milliseconds(burst_time));
-}
 
 class process_pool
 {
     std::atomic_bool done;
-    threadsafe_queue<std::function<void()> > work_queue;
+    threadsafe_sorted_list<process_table> work_queue;
     std::vector<std::thread> threads;
     joiner_threads joiner_threads;
 
     void worker_thread()
     {
-
         while (!done)
         {
 
-            std::function<void()> task;
-            if (work_queue.try_pop(task))
+            process_table _process_table;
+            if (work_queue.try_pop_front(_process_table))
             {
-                task();
+                int remaining_time = _process_table.run();
+                if (remaining_time > 0)
+                {
+                    _process_table.burst_time = remaining_time;
+                    submit(_process_table);
+                }
             }
             else
             {
@@ -67,16 +64,20 @@ public:
         return work_queue.size();
     }
 
+    bool is_done()
+    {
+        return done;
+    }
+
     ~process_pool()
     {
         done = true;
     }
 
-    template <typename Function_type>
-    void submit(Function_type f)
+    void submit(process_table _process_table)
     {
-        work_queue.push(std::function<void()>(f));
-        std::cout << work_queue.size() << std::endl;
+        work_queue.push_back(_process_table);
+        //std::cout << work_queue.size() << std::endl;
     }
 };
 
@@ -88,12 +89,15 @@ int main()
     std::cout << "Testing Process Pool" << std::endl;
     std::srand(std::time(0));
 
-    for (int i = 0; i < 100; i++)
+    for (int i = 0; i < 12; i++)
     {
-        pool.submit([&]
-                    { run(std::atomic_fetch_add(&counter, 1), (std::rand() % 1000 + 1)); });
+        process_table p1(i, (std::rand() % 1000 + 1));
+        pool.submit(p1);
     }
 
-    while (pool.size() != 0)
+    while (!pool.is_done())
+    {
+        //std::cout << (list.pop_front().get())->burst_time << std::endl;
         ;
+    }
 }
